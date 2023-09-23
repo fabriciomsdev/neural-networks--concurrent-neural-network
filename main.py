@@ -10,6 +10,7 @@
 # IMPORTAÇÃO DE BIBLIOTECAS
 #==============================================================================
 from dataclasses import dataclass
+import datetime
 import secrets
 from typing import Dict, List
 import pandas as pd
@@ -61,11 +62,12 @@ class ConcurrentNeuralNetworkTestResult:
 
 @dataclass
 class ConcurrentNeuralNetworkTestParam:
-    num_neur_rnc: int = 10,
-    epocas_rnc: int = 100,
-    taxa_aprend_rnc: int = 2.0,
-    ordem_pol: int = 1,
+    neurons_qty: int = 10,
+    epochs: int = 100,
+    learning_percentual: int = 2.0,
+    polinomial_order: int = 1,
     cilindrada_to_predict: int = 1.0
+    name: str = None
 
 
 class ConcurrentNeuralNetworkTest:
@@ -99,19 +101,21 @@ class ConcurrentNeuralNetworkTest:
         #==============================================================================
 
         # DEFINA A QUANTIDADE DE NEURÔNIOS DA REDE
-        self.num_neur_rnc = params.num_neur_rnc
+        self.neurons_qty = params.neurons_qty
 
         # DEFINA O NÚMERO DE ÉPOCAS PARA TREINAMENTO DA REDE
-        self.epocas_rnc = params.epocas_rnc
+        self.epochs = params.epochs
 
         # DEFINA A TAXA DE APRENDIZADO DA REDE
-        self.taxa_aprend_rnc = params.taxa_aprend_rnc
+        self.learning_percentual = params.learning_percentual
 
         # Ordem do Polinômio para Regressão cilindrada x efciência
-        self.ordem_pol = params.ordem_pol
+        self.polinomial_order = params.polinomial_order
 
         # Informe um valor de Cilindrada (em L) para prever a Eficiência (em Km/L)
         self.cilindrada_to_predict = params.cilindrada_to_predict
+
+        self.test_id = params.name + '-' + secrets.token_hex(8)
 
 
     def run(self):
@@ -131,14 +135,14 @@ class ConcurrentNeuralNetworkTest:
         #==============================================================================
 
         # Criação da Rede Neural Competitiva 1
-        rnc = RNC(input_shape=inshape, num_neurons=self.num_neur_rnc)
+        rnc = RNC(input_shape=inshape, num_neurons=self.neurons_qty)
 
         #==============================================================================
         # TREINAMENTO DA REDE NEURAL COMPETITIVA
         #==============================================================================
 
         # Treinamento da Rede Neural Competitiva 1
-        rnc.train(combinacao, learning_rate=self.taxa_aprend_rnc, num_epochs=self.epocas_rnc)
+        rnc.train(combinacao, learning_rate=self.learning_percentual, num_epochs=self.epochs)
 
         #==============================================================================
         # REALIZAR PREDIÇÕES DA REDE NEURAL COMPETITIVA
@@ -152,7 +156,7 @@ class ConcurrentNeuralNetworkTest:
         #==============================================================================
 
         # Cálculo do polinômio para Cilindrada X Eficiência
-        coefficients = np.polyfit(cilindrada, eficiencia, self.ordem_pol)
+        coefficients = np.polyfit(cilindrada, eficiencia, self.polinomial_order)
         polynomial = np.poly1d(coefficients)
 
         #==============================================================================
@@ -220,8 +224,8 @@ class ConcurrentNeuralNetworkTest:
         y_values = polynomial(x_values)
         ax.plot(x_values, y_values, color='red')
 
-        image_hash = secrets.token_hex(8)
-        image_name = f'./output/{image_hash}.png'
+        image_hash = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
+        image_name = f'./output/v3/{self.test_id}-{image_hash}-{secrets.token_urlsafe(4)}.png'
         plt.savefig(image_name)
 
         #==============================================================================
@@ -273,40 +277,74 @@ class ConcurrentNeuralNetworkTest:
 
     def save_results_on_csv(self, results: List[Dict]):
         df = pd.DataFrame(results)
-        test_id = secrets.token_hex(8)
-        df.to_csv(f'./results/results-{test_id}.csv', index=False)
+        csv_hash = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
+        df.to_csv(f'./results/results-{csv_hash}.csv', index=False)
 
 
-possible_config_combinatios = [
+possible_config_combinations = []
+
+
+for epochs_qty in [10, 20, 30, 40, 50, 60, 70]:
+    possible_config_combinations.append(
     ConcurrentNeuralNetworkTestParam(
-        num_neur_rnc=10,
-        epocas_rnc=50,
-        taxa_aprend_rnc=2.0,
-        ordem_pol=1,
-        cilindrada_to_predict=1.0
-    ),
+        neurons_qty=2,
+        epochs=epochs_qty,
+        learning_percentual=0.9,
+        polinomial_order=1,
+        cilindrada_to_predict=50,
+        name='test-epoch-' + str(epochs_qty)
+    ))
+
+
+for neurons_qty in range(2, 20):
+    possible_config_combinations.append(
     ConcurrentNeuralNetworkTestParam(
-        num_neur_rnc=20,
-        epocas_rnc=60,
-        taxa_aprend_rnc=2.0,
-        ordem_pol=1,
-        cilindrada_to_predict=6.0
-    ),
+        neurons_qty=neurons_qty,
+        epochs=40,
+        learning_percentual=0.9,
+        polinomial_order=1,
+        cilindrada_to_predict=8.0,
+        name='test-neurons-' + str(neurons_qty)
+    ))
+
+
+for polinomial_orderinomial in range(2, 20):
+    possible_config_combinations.append(
     ConcurrentNeuralNetworkTestParam(
-        num_neur_rnc=100,
-        epocas_rnc=80,
-        taxa_aprend_rnc=1.0,
-        ordem_pol=1,
-        cilindrada_to_predict=8.0
-    ),
-]
+        neurons_qty=15,
+        epochs=40,
+        learning_percentual=0.9,
+        polinomial_order=polinomial_orderinomial,
+        cilindrada_to_predict=8.0,
+        name='polinomial-order-' + str(polinomial_orderinomial)
+    ))
+
+
+possible_config_combinations.append(
+    ConcurrentNeuralNetworkTestParam(
+        neurons_qty=20,
+        epochs=30,
+        learning_percentual=0.8,
+        polinomial_order=3,
+        cilindrada_to_predict=14.0,
+        name='final-3'
+    )
+)
+
 
 test = ConcurrentNeuralNetworkTest()
-test.prepare_dataset()
 results = []
 
-for param in possible_config_combinatios:
+for param in possible_config_combinations:
+    test.prepare_dataset()
     test.set_config_params(param)
     results.append(test.run())
 
-test.save_results_on_csv(results)
+merge_between_params_and_results = []
+
+for index in range(0, len(results) - 1):
+    merged = results[index].__dict__.copy()
+    merged.update(possible_config_combinations[index].__dict__)
+    merge_between_params_and_results.append(merged)
+
+test.save_results_on_csv(merge_between_params_and_results)
